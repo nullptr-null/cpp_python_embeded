@@ -156,7 +156,9 @@ if self_lib_dir and self_lib_dir not in sys.path:
             }
 
         } catch (const std::exception&) {
-            throw;
+            //throw;
+            //  捕获异常，返回失败结果
+            result = R"({"status": "fail", "message": "Exception occurred during Python execution"})";
         }
 
         // output the captured python output for debugging

@@ -22,8 +22,8 @@ namespace PythonBase {
 
 extern "C" PYTHONBASE_API int Init();
 extern "C" PYTHONBASE_API int Deinit();
-extern "C" PYTHONBASE_API int CreateInterface(PythonBaseInterfaceType type, PythonBaseInterfaceBase** obj);
-extern "C" PYTHONBASE_API int DestroyInterface(PythonBaseInterfaceType type, PythonBaseInterfaceBase* obj);
+extern "C" PYTHONBASE_API int CreateInterface(PythonBaseInterfaceType type, void** obj);
+extern "C" PYTHONBASE_API int DestroyInterface(PythonBaseInterfaceType type, void* obj);
 extern "C" PYTHONBASE_API void* MmAlloc(size_t size);
 
 extern "C" PYTHONBASE_API void MmFree(void* ptr);

@@ -76,12 +76,12 @@ namespace PythonBase
             return -1;
         }
 
-        int PythonBase_CreateInterface(PythonBaseInterfaceType type, PythonBaseInterfaceBase** obj) {
+        int PythonBase_CreateInterface(PythonBaseInterfaceType type, void** obj) {
             if (m_dllLoaderMgr == nullptr) {
                 return -1;
             }
 
-            using CREATEINTERFACE = int (*)(PythonBaseInterfaceType, PythonBaseInterfaceBase**);
+            using CREATEINTERFACE = int (*)(PythonBaseInterfaceType, void**);
             CREATEINTERFACE pFunc = (CREATEINTERFACE)m_dllLoaderMgr->GetFunction("CreateInterface");
             if (pFunc == nullptr) {
                 return -2;
@@ -90,11 +90,11 @@ namespace PythonBase
             return ret;
         }
 
-        int PythonBase_DestroyInterface(PythonBaseInterfaceType type, PythonBaseInterfaceBase* obj) {
+        int PythonBase_DestroyInterface(PythonBaseInterfaceType type, void* obj) {
             if (m_dllLoaderMgr == nullptr) {
                 return -1;
             }
-            using DESTROYINTERFACE = int (*)(PythonBaseInterfaceType, PythonBaseInterfaceBase*);
+            using DESTROYINTERFACE = int (*)(PythonBaseInterfaceType, void*);
             DESTROYINTERFACE pFunc = (DESTROYINTERFACE)m_dllLoaderMgr->GetFunction("DestroyInterface");
             if (pFunc == nullptr) {
                 return -2;
@@ -106,14 +106,18 @@ namespace PythonBase
 
         template <typename T>
         std::shared_ptr<T> GetPythonBaseInterface(PythonBaseInterfaceType type) {
-            PythonBaseInterfaceBase* base = nullptr;
+            void* base = nullptr;
             if (PythonBase_CreateInterface(type, &base) != 0) {
                 return nullptr;
             }
             if (base == nullptr) {
                 return nullptr;  // Failed to create interface
             }
-            T* typePtr = dynamic_cast<T*>(base);
+            T* typePtr = static_cast<T*>(base);
+
+            if (typePtr == nullptr) {
+                return nullptr;  // Failed to create interface
+            }
 
             std::shared_ptr<T> interfacePtr =
                     std::shared_ptr<T>(typePtr, [type,this](T* ptr) { PythonBase_DestroyInterface(type, ptr); });

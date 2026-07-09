@@ -11,7 +11,6 @@
 
 namespace PythonBase 
 {
-    std::map<PythonBaseInterfaceType, std::vector<std::shared_ptr<PythonBaseInterfaceBase>>> g_pluginInterface;
     std::shared_ptr<Logger> g_logger = Logger::GetInstance();
 
     // mutex
@@ -48,7 +47,7 @@ namespace PythonBase
         return 0;
     }
 
-    PYTHONBASE_API int CreateInterface(PythonBaseInterfaceType type, PythonBaseInterfaceBase** obj)
+    PYTHONBASE_API int CreateInterface(PythonBaseInterfaceType type, void** obj)
     {
         std::lock_guard<std::mutex> lock(g_interfaceMutex);
         if (type < PythonBaseInterfaceType::PYTHONBASE_INTERFACE_ENV_MGR ||
@@ -65,34 +64,32 @@ namespace PythonBase
         }
 
         // Check if the interface already exists
-        if (g_pluginInterface[type].empty())
         {
             // Create a new interface instance
 
             if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_ENV_MGR)
             {
                 g_logger->info("Creating Environment Manager interface instance.");
-                auto newInterface = std::make_shared<PythonBaseInterfaceEnvMgr>();
-                g_pluginInterface[type].push_back(newInterface);
-                *obj = newInterface.get();  // Set the output pointer to the raw pointer of the shared_ptr
-            } else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_PY_MGR)
+                auto newInterface = new PythonBaseInterfaceEnvMgr;
+                *obj = static_cast<void*>(newInterface);  // Set the output pointer to the raw pointer of the shared_ptr
+            }
+            else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_PY_MGR)
             {
                 g_logger->info("Creating Python Manager interface instance.");
-                auto newInterface = std::make_shared<PythonBaseInterfacePyMgr>();
-                g_pluginInterface[type].push_back(newInterface);
-                *obj = newInterface.get(); // Set the output pointer to the raw pointer of the shared_ptr               
-            } else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_UIVIEW_LOG)
+                auto newInterface = new PythonBaseInterfacePyMgr;
+                *obj = static_cast<void*>(newInterface); // Set the output pointer to the raw pointer of the shared_ptr               
+            } 
+            else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_UIVIEW_LOG)
             {
                 g_logger->info("Creating UIVIEW_LOG interface instance.");
                 auto newInterface = UIViewLogger::GetInstance();
-                g_pluginInterface[type].push_back(newInterface);
-                *obj = newInterface.get(); // Set the output pointer to the raw pointer of the shared_ptr               
-            } else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_LOG)
+                *obj = static_cast<void*>(newInterface.get()); // Set the output pointer to the raw pointer of the shared_ptr               
+            }
+            else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_LOG)
             {
                 g_logger->info("Creating LOG interface instance.");
                 auto newInterface = g_logger;
-                g_pluginInterface[type].push_back(newInterface);
-                *obj = newInterface.get(); // Set the output pointer to the raw pointer of the shared_ptr               
+                *obj = static_cast<void*>(newInterface.get()); // Set the output pointer to the raw pointer of the shared_ptr               
             }
             else
             {
@@ -100,16 +97,9 @@ namespace PythonBase
                 return -1; // Unsupported type
             }
         }
-        else
-        {
-            // If an interface already exists, return the first one
-            auto existsIf = g_pluginInterface[type][0];
-            *obj = existsIf.get(); // Set the output pointer to the raw pointer of the shared_ptr
-            g_pluginInterface[type].push_back(existsIf); // 单例接口
-        }
         return 0; // Success
     }
-    PYTHONBASE_API int DestroyInterface(PythonBaseInterfaceType type, PythonBaseInterfaceBase* obj)
+    PYTHONBASE_API int DestroyInterface(PythonBaseInterfaceType type, void* obj)
     {
         std::lock_guard<std::mutex> lock(g_interfaceMutex);
         if (obj == nullptr)
@@ -125,12 +115,18 @@ namespace PythonBase
             return -1; // Invalid type
         }
 
-        // Find the interface in the map
-        auto& interfaces = g_pluginInterface[type];
-        if (!interfaces.empty())
-        {
-            // remove any one;
-            interfaces.erase(interfaces.begin());
+        if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_ENV_MGR) {
+            g_logger->info("Destroying Environment Manager interface instance.");
+            auto newInterface = static_cast<PythonBaseInterfaceEnvMgr*>(obj);
+            delete newInterface;
+        } else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_PY_MGR) {
+            g_logger->info("Destroying Python Manager interface instance.");
+            auto newInterface = static_cast<PythonBaseInterfacePyMgr*>(obj);
+            delete newInterface;
+        } else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_UIVIEW_LOG) {
+            g_logger->info("Destroying UIVIEW_LOG interface instance.");
+        } else if (type == PythonBaseInterfaceType::PYTHONBASE_INTERFACE_LOG) {
+            g_logger->info("Destroying LOG interface instance.");
         }
 
         return -1; // Interface not found
